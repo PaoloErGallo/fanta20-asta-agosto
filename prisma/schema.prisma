@@ -1,0 +1,87 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String
+  password  String
+  teamName  String
+  totalBudget Float
+  spentBudget Float @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  bids      Bid[]
+  isAdmin   Boolean @default(false)
+
+  @@map("users")
+}
+
+model AuctionSection {
+  id        String     @id @default(cuid())
+  name      String
+  day       Int        // 1 for first day, 2 for second day
+  order     Int        // Order within the day
+  status    String     @default("upcoming") // upcoming, active, closed, results_ready
+  startTime DateTime?
+  endTime   DateTime?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  players   Player[]
+  bids      Bid[]
+
+  @@map("auction_sections")
+}
+
+model Player {
+  id        String     @id @default(cuid())
+  name      String
+  position  String     // Goalkeeper, Defender, Midfielder, Forward
+  club      String
+  sectionId String
+  section   AuctionSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  
+  bids      Bid[]
+
+  @@map("players")
+}
+
+model Bid {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  playerId  String
+  player    Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  sectionId String
+  section   AuctionSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  amount    Float
+  preference Int       // 1-6, order of preference
+  status    String     @default("pending") // pending, won, lost
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  @@unique([userId, sectionId, preference])
+  @@map("bids")
+}
+
+model SectionBudget {
+  id        String     @id @default(cuid())
+  userId    String
+  sectionId String
+  maxBidInSection Float  // Highest bid user made in this section
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  @@unique([userId, sectionId])
+  @@map("section_budgets")
+}
