@@ -1,21 +1,22 @@
-import NextAuth from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { JWT } from 'next-auth/jwt';
 
 const prisma = new PrismaClient();
 
 export const authOptions = {
   providers: [
-    CredentialsProvider({
+    {
+      id: 'credentials',
       name: 'Credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      authorize: async (credentials: any) => {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('Email and password required');
+          throw new Error('Invalid credentials');
         }
 
         const user = await prisma.user.findUnique({
@@ -23,15 +24,15 @@ export const authOptions = {
         });
 
         if (!user) {
-          throw new Error('No user found with this email');
+          throw new Error('User not found');
         }
 
-        const passwordValid = await bcrypt.compare(
+        const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password
         );
 
-        if (!passwordValid) {
+        if (!isPasswordValid) {
           throw new Error('Invalid password');
         }
 
@@ -43,24 +44,22 @@ export const authOptions = {
           isAdmin: user.isAdmin,
         };
       },
-    }),
+    },
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: JWT; user?: any }) {
       if (user) {
         token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
-        token.teamName = user.teamName;
         token.isAdmin = user.isAdmin;
+        token.teamName = user.teamName;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: JWT }) {
       if (session.user) {
         session.user.id = token.id;
-        session.user.teamName = token.teamName;
         session.user.isAdmin = token.isAdmin;
+        session.user.teamName = token.teamName;
       }
       return session;
     },
@@ -70,7 +69,13 @@ export const authOptions = {
   },
   session: {
     strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 };
 
-export default NextAuth(authOptions);
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  res.status(404).json({ error: 'Not found' });
+}

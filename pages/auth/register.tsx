@@ -1,39 +1,40 @@
-import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { useState } from 'react';
 
-export default function Register() {
+export default function RegisterPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    confirmPassword: '',
     name: '',
     teamName: '',
-    totalBudget: '',
+    password: '',
+    confirmPassword: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
+    // Validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    if (!formData.totalBudget || parseFloat(formData.totalBudget) <= 0) {
-      setError('Budget must be greater than 0');
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters');
       return;
     }
 
@@ -45,21 +46,20 @@ export default function Register() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: formData.email,
-          password: formData.password,
           name: formData.name,
           teamName: formData.teamName,
-          totalBudget: formData.totalBudget,
+          password: formData.password,
         }),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        router.push('/auth/login?registered=true');
+      } else {
         const data = await response.json();
-        throw new Error(data.error || 'Registration failed');
+        setError(data.error || 'Registration failed');
       }
-
-      router.push('/auth/login?registered=true');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -70,10 +70,10 @@ export default function Register() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Fanta20 Asta Agosto
+            Create your team account
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Create your team account
+            Fanta20 Asta Agosto
           </p>
         </div>
 
@@ -86,30 +86,17 @@ export default function Register() {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                value={formData.email}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Full name
+                Full Name
               </label>
               <input
                 id="name"
                 name="name"
                 type="text"
+                autoComplete="name"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Your name"
                 value={formData.name}
                 onChange={handleChange}
               />
@@ -117,32 +104,33 @@ export default function Register() {
 
             <div>
               <label htmlFor="teamName" className="block text-sm font-medium text-gray-700">
-                Team name
+                Team Name
               </label>
               <input
                 id="teamName"
                 name="teamName"
                 type="text"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Your team name"
                 value={formData.teamName}
                 onChange={handleChange}
               />
             </div>
 
             <div>
-              <label htmlFor="totalBudget" className="block text-sm font-medium text-gray-700">
-                Total budget (€)
+              <label htmlFor="email-address" className="block text-sm font-medium text-gray-700">
+                Email address
               </label>
               <input
-                id="totalBudget"
-                name="totalBudget"
-                type="number"
+                id="email-address"
+                name="email"
+                type="email"
+                autoComplete="email"
                 required
-                step="0.01"
-                min="0"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                value={formData.totalBudget}
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Email address"
+                value={formData.email}
                 onChange={handleChange}
               />
             </div>
@@ -155,8 +143,10 @@ export default function Register() {
                 id="password"
                 name="password"
                 type="password"
+                autoComplete="new-password"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Password (min 6 characters)"
                 value={formData.password}
                 onChange={handleChange}
               />
@@ -164,27 +154,31 @@ export default function Register() {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirm password
+                Confirm Password
               </label>
               <input
                 id="confirmPassword"
                 name="confirmPassword"
                 type="password"
+                autoComplete="new-password"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Confirm password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
               />
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            {loading ? 'Creating account...' : 'Create account'}
-          </button>
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {loading ? 'Creating account...' : 'Register'}
+            </button>
+          </div>
 
           <div className="text-center">
             <p className="text-sm text-gray-600">

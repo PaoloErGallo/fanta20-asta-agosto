@@ -13,30 +13,39 @@ export default async function handler(
   }
 
   try {
-    const { email, password, name, teamName, totalBudget } = req.body;
+    const { email, name, teamName, password } = req.body;
 
-    if (!email || !password || !name || !teamName || !totalBudget) {
+    // Validation
+    if (!email || !name || !teamName || !password) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Check if user exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
 
     if (existingUser) {
-      return res.status(400).json({ error: 'Email already exists' });
+      return res.status(400).json({ error: 'Email already registered' });
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create user
     const user = await prisma.user.create({
       data: {
         email,
-        password: hashedPassword,
         name,
         teamName,
-        totalBudget: parseFloat(totalBudget),
+        password: hashedPassword,
+        totalBudget: 500, // Default budget
         spentBudget: 0,
+        isAdmin: false,
       },
     });
 
