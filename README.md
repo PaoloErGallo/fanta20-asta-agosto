@@ -1,31 +1,31 @@
-# Fanta20 Asta Agosto - Fantasy Football Auction Platform
+# Fanta20 Asta Agosto
 
-A sealed-bid auction platform built for fantasy football leagues. Teams submit their bids confidentially, and results are revealed only after all bids are submitted.
+An interactive fantasy football auction platform with sealed bidding mechanics, budget tracking, and administrative oversight.
 
 ## Features
 
-- ✅ **Sealed-Bid Auctions**: Players cannot see competitors' bids until auction closes
-- ✅ **Multiple Sections**: Organize auctions into different sections (Day 1: 4 sections, Day 2: 5 sections)
-- ✅ **Budget Management**: Automatic budget tracking and deduction based on highest bids per section
-- ✅ **User Authentication**: Secure login and registration for all 20 teams
-- ✅ **Admin Dashboard**: Manage players, sections, and view results
-- ✅ **Results Display**: See winners and standings after bidding closes
+- **User Authentication**: Secure login and registration with NextAuth
+- **Sealed Bidding**: Place confidential bids on players across multiple auction sections
+- **Budget Management**: Track individual and aggregate budget allocation
+- **Multi-Day Auctions**: Organize players into sections across multiple days
+- **Admin Dashboard**: Monitor all teams, budgets, and auction progress
+- **Preference Rankings**: Bid with preference rankings (1-6) for strategic selection
 
-## Tech Stack
+## Technology Stack
 
-- **Frontend**: Next.js + React + TypeScript
+- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
 - **Backend**: Next.js API Routes
 - **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: NextAuth.js
-- **Styling**: Tailwind CSS
+- **Authentication**: NextAuth.js with JWT
+- **Security**: bcrypt for password hashing
 
-## Getting Started
+## Setup Instructions
 
 ### Prerequisites
 
-- Node.js 16+ and npm/yarn
+- Node.js 18+
 - PostgreSQL database
-- Git
+- npm or yarn package manager
 
 ### Installation
 
@@ -40,31 +40,32 @@ A sealed-bid auction platform built for fantasy football leagues. Teams submit t
    npm install
    ```
 
-3. **Set up environment variables**
+3. **Configure environment variables**
    ```bash
    cp .env.example .env.local
    ```
-   Edit `.env.local` and add:
-   - PostgreSQL connection string in `DATABASE_URL`
-   - Generate `NEXTAUTH_SECRET` with: `openssl rand -base64 32`
-   - Set `NEXTAUTH_URL` (default: http://localhost:3000)
+   
+   Edit `.env.local` and configure:
+   - `DATABASE_URL`: PostgreSQL connection string
+   - `NEXTAUTH_SECRET`: Generate with `openssl rand -base64 32`
+   - `NEXTAUTH_URL`: Application URL (http://localhost:3000 for development)
 
-4. **Set up the database**
+4. **Initialize the database**
    ```bash
-   npx prisma migrate dev --name init
+   npx prisma db push
    ```
 
-5. **Seed the database (optional)**
+5. **Generate Prisma client**
    ```bash
-   npx prisma db seed
+   npx prisma generate
    ```
 
-6. **Run the development server**
+6. **Start the development server**
    ```bash
    npm run dev
    ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+   The application will be available at `http://localhost:3000`
 
 ## Project Structure
 
@@ -72,85 +73,117 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 fanta20-asta-agosto/
 ├── pages/
 │   ├── api/
-│   │   ├── auth/          # Authentication endpoints
-│   │   ├── bids/          # Bid submission endpoints
-│   │   └── sections/      # Auction section endpoints
-│   ├── auth/              # Login & registration pages
-│   ├── admin/             # Admin dashboard
-│   └── dashboard.tsx      # User dashboard
+│   │   ├── auth/              # Authentication endpoints
+│   │   ├── bids/              # Bid management endpoints
+│   │   ├── sections/          # Auction sections endpoints
+│   │   └── admin/             # Admin endpoints
+│   ├── admin/                 # Admin dashboard
+│   ├── auction/               # Auction bidding pages
+│   ├── auth/                  # Authentication pages
+│   ├── dashboard.tsx          # User dashboard
+│   └── index.tsx              # Home page
 ├── prisma/
-│   └── schema.prisma      # Database schema
-├── public/                # Static files
-└── package.json
+│   └── schema.prisma          # Database schema
+├── public/                    # Static assets
+├── .env.example              # Environment variables template
+├── next.config.js            # Next.js configuration
+├── tsconfig.json             # TypeScript configuration
+└── package.json              # Dependencies
 ```
+
+## Database Schema
+
+### User
+- Email, name, password (hashed)
+- Team information and budget tracking
+- Admin flag for role-based access
+
+### Player
+- Player details (name, position, club)
+- Associated with auction sections
+
+### AuctionSection
+- Name, day, order
+- Status (upcoming, active, completed)
+- Contains multiple players
+
+### Bid
+- Links user, player, and section
+- Amount and preference ranking (1-6)
+- Status tracking (pending, won, lost)
+
+### SectionBudget
+- Tracks maximum bid per section per user
+- Used for budget allocation
 
 ## API Endpoints
 
 ### Authentication
 - `POST /api/auth/register` - Register new team
-- `POST /api/auth/[...nextauth]` - NextAuth endpoints
+- `POST /api/auth/[...nextauth]` - NextAuth authentication
 
 ### Bids
-- `POST /api/bids/submit` - Submit bids for a section
-- `GET /api/bids/user` - Get user's bids
+- `POST /api/bids/submit` - Submit sealed bids for a section
 
 ### Sections
-- `GET /api/sections` - List all sections
-- `GET /api/sections/[id]` - Get section details with players
-- `PUT /api/sections/[id]` - Update section (admin only)
+- `GET /api/sections` - List all auction sections
+- `GET /api/sections/[id]` - Get section details
 
-## Auction Workflow
+### Admin
+- `GET /api/admin/users` - List all users and budgets (admin only)
 
-1. **User Registration**: Teams register with email, name, and total budget
-2. **View Dashboard**: See all auction sections organized by day
-3. **Submit Bids**: 
-   - Open a section
-   - Select up to 6 players
-   - Set preference order (1-6)
-   - Enter bid amount for each
-   - Submit (budget auto-updates with highest bid)
-4. **Wait for Results**: After all sections close, results are calculated
-5. **View Winners**: See which players each team won
+## Usage
 
-## Budget System
+### For Users
 
-- Each team has a total budget
-- When bidding on a section with multiple preferences:
-  - The **highest bid** in that section is locked as reserved budget
-  - Budget is released/adjusted when moving to next section
-  - Only **the one player you win** actually costs the full bid amount
-  - If you win player #3 (because #1 and #2 went to others), your budget adjusts to show the actual cost
+1. Register with your team details and initial budget
+2. View available auction sections on your dashboard
+3. Click "Place Bids" on active sections
+4. Enter bid amounts and preference rankings for each player
+5. Submit bids - your highest bid locks the reserved budget
+6. Monitor your remaining budget in real-time
+
+### For Administrators
+
+1. Access the admin dashboard at `/admin`
+2. Monitor all teams and their budget allocation
+3. View real-time spending across the auction
+4. Track auction section status and progress
 
 ## Development
 
-### Create migrations
+### Database Management
+
 ```bash
-npx prisma migrate dev --name <migration_name>
+# Push schema changes
+npm run db:push
+
+# Open Prisma Studio for data management
+npm run db:studio
+
+# Generate Prisma client after schema changes
+npm run prisma:generate
 ```
 
-### Open Prisma Studio
-```bash
-npx prisma studio
-```
+### Building for Production
 
-### Build for production
 ```bash
 npm run build
-npm start
+npm run start
 ```
 
-## Contributing
+## Security Considerations
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+- All passwords are hashed with bcrypt (salt rounds: 10)
+- JWT tokens used for session management
+- Database queries use Prisma for SQL injection prevention
+- Admin routes check user permissions
+- Bids are immutable once submitted
 
 ## License
 
-MIT
+Proprietary - All rights reserved
 
 ## Support
 
-For issues and questions, please create an issue on GitHub.
-
----
-
-**Fanta20 Asta Agosto** - Making fantasy football auctions fair and transparent! ⚽
+For issues or questions, please contact the development team.
