@@ -1,87 +1,89 @@
-// prisma/schema.prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
 }
 
-model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
-  name      String
-  password  String
-  teamName  String
-  totalBudget Float
-  spentBudget Float @default(0)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  
-  bids      Bid[]
-  isAdmin   Boolean @default(false)
-
-  @@map("users")
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model AuctionSection {
-  id        String     @id @default(cuid())
-  name      String
-  day       Int        // 1 for first day, 2 for second day
-  order     Int        // Order within the day
-  status    String     @default("upcoming") // upcoming, active, closed, results_ready
-  startTime DateTime?
-  endTime   DateTime?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  
-  players   Player[]
-  bids      Bid[]
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  teamName      String
+  totalBudget   Float     @default(0)
+  spentBudget   Float     @default(0)
+  isAdmin       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  @@map("auction_sections")
+  bids          Bid[]
+  sectionBudgets SectionBudget[]
 }
 
 model Player {
-  id        String     @id @default(cuid())
-  name      String
-  position  String     // Goalkeeper, Defender, Midfielder, Forward
-  club      String
-  sectionId String
-  section   AuctionSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  createdAt DateTime   @default(now())
-  
-  bids      Bid[]
+  id            String    @id @default(cuid())
+  name          String
+  position      String
+  club          String
+  value         Float?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  @@map("players")
+  sections      AuctionSection[]
+  bids          Bid[]
+}
+
+model AuctionSection {
+  id            String    @id @default(cuid())
+  name          String
+  day           Int
+  order         Int
+  status        String    @default("upcoming") // upcoming, active, completed
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  players       Player[]
+  bids          Bid[]
+  budgets       SectionBudget[]
 }
 
 model Bid {
-  id        String     @id @default(cuid())
-  userId    String
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  playerId  String
-  player    Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  sectionId String
-  section   AuctionSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  amount    Float
-  preference Int       // 1-6, order of preference
-  status    String     @default("pending") // pending, won, lost
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  
-  @@unique([userId, sectionId, preference])
-  @@map("bids")
+  id            String    @id @default(cuid())
+  userId        String
+  playerId      String
+  sectionId     String
+  amount        Float
+  preference    Int       // 1-6 ranking for sealed bidding
+  status        String    @default("pending") // pending, won, lost
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  player        Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  section       AuctionSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, playerId, sectionId])
+  @@index([userId])
+  @@index([sectionId])
 }
 
 model SectionBudget {
-  id        String     @id @default(cuid())
-  userId    String
-  sectionId String
-  maxBidInSection Float  // Highest bid user made in this section
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  
+  id            String    @id @default(cuid())
+  userId        String
+  sectionId     String
+  maxBidInSection Float   // The highest bid amount for this section
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  section       AuctionSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
   @@unique([userId, sectionId])
-  @@map("section_budgets")
+  @@index([userId])
 }

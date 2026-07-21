@@ -1,6 +1,7 @@
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 interface AuctionSection {
   id: string;
@@ -15,6 +16,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [sections, setSections] = useState<AuctionSection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [budgetRemaining, setBudgetRemaining] = useState(0);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -23,8 +25,10 @@ export default function Dashboard() {
   }, [status, router]);
 
   useEffect(() => {
-    fetchSections();
-  }, []);
+    if (session?.user) {
+      fetchSections();
+    }
+  }, [session]);
 
   const fetchSections = async () => {
     try {
@@ -44,13 +48,6 @@ export default function Dashboard() {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
-  if (!session?.user) {
-    return null;
-  }
-
-  const day1Sections = sections.filter((s) => s.day === 1).sort((a, b) => a.order - b.order);
-  const day2Sections = sections.filter((s) => s.day === 2).sort((a, b) => a.order - b.order);
-
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow">
@@ -60,25 +57,19 @@ export default function Dashboard() {
               <h1 className="text-2xl font-bold text-gray-900">Fanta20 Asta Agosto</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <div>
-                <p className="text-sm text-gray-700">
-                  <strong>{session.user.teamName}</strong>
-                </p>
-                <p className="text-xs text-gray-600">{session.user.email}</p>
-              </div>
-              {session.user.isAdmin && (
-                <a
+              {session?.user?.isAdmin && (
+                <Link
                   href="/admin"
                   className="text-sm font-medium text-blue-600 hover:text-blue-700"
                 >
-                  Admin
-                </a>
+                  Admin Panel
+                </Link>
               )}
               <button
-                onClick={() => signOut()}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                onClick={() => router.push('/api/auth/signout')}
+                className="text-sm font-medium text-gray-600 hover:text-gray-900"
               >
-                Sign out
+                Sign Out
               </button>
             </div>
           </div>
@@ -86,80 +77,86 @@ export default function Dashboard() {
       </nav>
 
       <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="space-y-12">
-          {/* Day 1 */}
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Day 1 - Sections</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {day1Sections.map((section) => (
-                <div
-                  key={section.id}
-                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow"
-                >
-                  <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg font-medium text-gray-900">{section.name}</h3>
-                    <p className="mt-2 text-sm text-gray-600">
-                      Status:{' '}
-                      <span
-                        className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                          section.status === 'upcoming'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : section.status === 'active'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {section.status}
-                      </span>
-                    </p>
-                    <button
-                      onClick={() => router.push(`/auction/${section.id}`)}
-                      className="mt-4 w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      View Section
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+        {/* Team Info Card */}
+        <div className="bg-white shadow rounded-lg mb-8">
+          <div className="px-6 py-4">
+            <h2 className="text-lg font-medium text-gray-900">Team: {session?.user?.teamName}</h2>
+            <p className="text-sm text-gray-600 mt-2">Email: {session?.user?.email}</p>
+          </div>
+        </div>
 
-          {/* Day 2 */}
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Day 2 - Sections</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {day2Sections.map((section) => (
+        {/* Budget Info Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <p className="text-sm font-medium text-gray-600">Total Budget</p>
+              <p className="mt-2 text-3xl font-bold text-gray-900">€0.00</p>
+            </div>
+          </div>
+
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <p className="text-sm font-medium text-gray-600">Reserved</p>
+              <p className="mt-2 text-3xl font-bold text-blue-600">€0.00</p>
+            </div>
+          </div>
+
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <p className="text-sm font-medium text-gray-600">Available</p>
+              <p className="mt-2 text-3xl font-bold text-green-600">€0.00</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Auction Sections */}
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">Auction Sections</h2>
+          </div>
+
+          <div className="divide-y divide-gray-200">
+            {sections.length === 0 ? (
+              <div className="px-6 py-4 text-center text-gray-600">
+                No auction sections available yet.
+              </div>
+            ) : (
+              sections.map((section) => (
                 <div
                   key={section.id}
-                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow"
+                  className="px-6 py-4 flex items-center justify-between hover:bg-gray-50"
                 >
-                  <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg font-medium text-gray-900">{section.name}</h3>
-                    <p className="mt-2 text-sm text-gray-600">
-                      Status:{' '}
-                      <span
-                        className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                          section.status === 'upcoming'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : section.status === 'active'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {section.status}
-                      </span>
+                  <div>
+                    <h3 className="text-base font-medium text-gray-900">{section.name}</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Day {section.day} • Round {section.order}
                     </p>
-                    <button
-                      onClick={() => router.push(`/auction/${section.id}`)}
-                      className="mt-4 w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <span
+                      className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
+                        section.status === 'upcoming'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : section.status === 'active'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
                     >
-                      View Section
-                    </button>
+                      {section.status}
+                    </span>
+                    {section.status === 'active' && (
+                      <Link
+                        href={`/auction/${section.id}`}
+                        className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                      >
+                        Place Bids
+                      </Link>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          </section>
+              ))
+            )}
+          </div>
         </div>
       </main>
     </div>
